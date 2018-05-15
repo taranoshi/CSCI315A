@@ -1,0 +1,2 @@
+sbt package
+spark-submit --class "StudentGrades" --master local[4] target/scala-2.11/studentgrades_2.11-1.1.0.jar
