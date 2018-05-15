@@ -1,0 +1,237 @@
+Spark session available as 'spark'.
+Welcome to
+      ____              __
+     / __/__  ___ _____/ /__
+    _\ \/ _ \/ _ `/ __/  '_/
+   /___/ .__/\_,_/_/ /_/\_\   version 2.2.1
+      /_/
+         
+Using Scala version 2.11.8 (Java HotSpot(TM) 64-Bit Server VM, Java 1.8.0_112)
+Type in expressions to have them evaluated.
+Type :help for more information.
+
+scala> :load -v sparkSource.scala
+Loading sparkSource.scala...
+
+scala> //import spark.implicits._
+
+scala> //import org.apache.spark.sql.functions._
+
+scala> //:load -v "/Users/nathanbunch/Google Drive/Programming and Development/Houghton College Classwork/BigData/HW2 - StudentsCSV_JSON/sparkSource.scala"
+
+scala> 
+
+scala> //FOR JSON FILES, THEY MUST BE ON A SINGLE LINE!!!!
+
+scala> val studentDF = spark.read.json("/Users/nathanbunch/Google Drive/Programming and Development/Houghton College Classwork/BigData/HW2 - StudentsCSV_JSON/Students.json")
+18/01/24 22:54:48 WARN ObjectStore: Version information not found in metastore. hive.metastore.schema.verification is not enabled so recording the schema version 1.2.0
+18/01/24 22:54:48 WARN ObjectStore: Failed to get database default, returning NoSuchObjectException
+18/01/24 22:54:50 WARN ObjectStore: Failed to get database global_temp, returning NoSuchObjectException
+studentDF: org.apache.spark.sql.DataFrame = [Age: bigint, GPA: double ... 3 more fields]
+
+scala> val examDF = spark.read.json("/Users/nathanbunch/Google Drive/Programming and Development/Houghton College Classwork/BigData/HW2 - StudentsCSV_JSON/Exams.json")
+examDF: org.apache.spark.sql.DataFrame = [Exam: string, Name: string ... 1 more field]
+
+scala> 
+
+scala> studentDF.show()
++---+---+------+----------------+------+
+|Age|GPA|Gender|           Major|  Name|
++---+---+------+----------------+------+
+| 21|3.4|  Male|Computer Science|  Mike|
+| 20|3.1|  Male|            Math|  John|
+| 21|3.4|Female|Computer Science| Holly|
+| 24|3.2|Female|         Biology|  Judy|
+| 30|3.1|Female|         Biology|Angela|
+| 28|3.5|Female|    Data Science|  Tess|
++---+---+------+----------------+------+
+
+
+scala> examDF.show()
++-----+-----+-----+
+| Exam| Name|Score|
++-----+-----+-----+
+|exam1|  Jon|   78|
+|exam1| John|   89|
+|exam1|Ethan|   98|
+|exam1|Jacob|   85|
+|exam2| John|   88|
+|exam2| Joel|   91|
+|exam2| Mike|   98|
+|exam2|  Jon|   85|
+|exam3|Jacob|   87|
+|exam3| Mike|   84|
+|exam3|Ethan|   90|
+|exam3| Joel|   95|
++-----+-----+-----+
+
+
+scala> //=================Begin Data Manipulation======================
+
+scala> studentDF.select("Major").distinct().show()
++----------------+                                                              
+|           Major|
++----------------+
+|            Math|
+|Computer Science|
+|    Data Science|
+|         Biology|
++----------------+
+
+
+scala> studentDF.createOrReplaceTempView("students")
+
+scala> var maleStudentData = spark.sql("SELECT * FROM STUDENTS WHERE Gender = 'Male'")
+maleStudentData: org.apache.spark.sql.DataFrame = [Age: bigint, GPA: double ... 3 more fields]
+
+scala> var femaleStudentData = spark.sql("SELECT * FROM STUDENTS WHERE Gender = 'Female'")
+femaleStudentData: org.apache.spark.sql.DataFrame = [Age: bigint, GPA: double ... 3 more fields]
+
+scala> maleStudentData.show()
++---+---+------+----------------+----+
+|Age|GPA|Gender|           Major|Name|
++---+---+------+----------------+----+
+| 21|3.4|  Male|Computer Science|Mike|
+| 20|3.1|  Male|            Math|John|
++---+---+------+----------------+----+
+
+
+scala> femaleStudentData.show()
++---+---+------+----------------+------+
+|Age|GPA|Gender|           Major|  Name|
++---+---+------+----------------+------+
+| 21|3.4|Female|Computer Science| Holly|
+| 24|3.2|Female|         Biology|  Judy|
+| 30|3.1|Female|         Biology|Angela|
+| 28|3.5|Female|    Data Science|  Tess|
++---+---+------+----------------+------+
+
+
+scala> var femaleAgeAverage = spark.sql("SELECT SUM(Age) FROM STUDENTS WHERE Gender = 'Female'") 
+femaleAgeAverage: org.apache.spark.sql.DataFrame = [sum(Age): bigint]
+
+scala> var femaleAgeCount = spark.sql("SELECT COUNT(*) FROM STUDENTS WHERE Gender = 'Female'")
+femaleAgeCount: org.apache.spark.sql.DataFrame = [count(1): bigint]
+
+scala> var femaleAgeAveCalc = femaleAgeAverage.head().get(0).asInstanceOf[Long].toDouble / femaleAgeCount.head().get(0).asInstanceOf[Long].toDouble
+femaleAgeAveCalc: Double = 25.75
+
+scala> println("Female Student Average Age: " + femaleAgeAveCalc)
+Female Student Average Age: 25.75
+
+scala> var maleAgeAverage = spark.sql("SELECT SUM(Age) FROM STUDENTS WHERE Gender = 'Male'") 
+maleAgeAverage: org.apache.spark.sql.DataFrame = [sum(Age): bigint]
+
+scala> var maleAgeCount = spark.sql("SELECT COUNT(*) FROM STUDENTS WHERE Gender = 'Male'")
+maleAgeCount: org.apache.spark.sql.DataFrame = [count(1): bigint]
+
+scala> var maleAgeAveCalc = maleAgeAverage.head().get(0).asInstanceOf[Long].toDouble / maleAgeCount.head().get(0).asInstanceOf[Long].toDouble
+maleAgeAveCalc: Double = 20.5
+
+scala> println("Male Student Average Age: " + maleAgeAveCalc)
+Male Student Average Age: 20.5
+
+scala> var studentUnder22 = spark.sql("SELECT * FROM STUDENTS WHERE Age < 22")
+studentUnder22: org.apache.spark.sql.DataFrame = [Age: bigint, GPA: double ... 3 more fields]
+
+scala> studentUnder22.show()
++---+---+------+----------------+-----+
+|Age|GPA|Gender|           Major| Name|
++---+---+------+----------------+-----+
+| 21|3.4|  Male|Computer Science| Mike|
+| 20|3.1|  Male|            Math| John|
+| 21|3.4|Female|Computer Science|Holly|
++---+---+------+----------------+-----+
+
+
+scala> var descendingAge = spark.sql("SELECT * FROM STUDENTS ORDER BY Age DESC")
+descendingAge: org.apache.spark.sql.DataFrame = [Age: bigint, GPA: double ... 3 more fields]
+
+scala> descendingAge.show()
++---+---+------+----------------+------+
+|Age|GPA|Gender|           Major|  Name|
++---+---+------+----------------+------+
+| 30|3.1|Female|         Biology|Angela|
+| 28|3.5|Female|    Data Science|  Tess|
+| 24|3.2|Female|         Biology|  Judy|
+| 21|3.4|Female|Computer Science| Holly|
+| 21|3.4|  Male|Computer Science|  Mike|
+| 20|3.1|  Male|            Math|  John|
++---+---+------+----------------+------+
+
+
+scala> examDF.createOrReplaceTempView("exams")
+
+scala> var exam1Ave = spark.sql("SELECT SUM(Score) FROM EXAMS WHERE Exam = 'exam1'").head().get(0).asInstanceOf[Long].toDouble / spark.sql("SELECT COUNT(*) FROM EXAMS WHERE Exam = 'exam1'").head().get(0).asInstanceOf[Long].toDouble
+exam1Ave: Double = 87.5
+
+scala> var exam2Ave = spark.sql("SELECT SUM(Score) FROM EXAMS WHERE Exam = 'exam2'").head().get(0).asInstanceOf[Long].toDouble / spark.sql("SELECT COUNT(*) FROM EXAMS WHERE Exam = 'exam2'").head().get(0).asInstanceOf[Long].toDouble
+exam2Ave: Double = 90.5
+
+scala> var exam3Ave = spark.sql("SELECT SUM(Score) FROM EXAMS WHERE Exam = 'exam3'").head().get(0).asInstanceOf[Long].toDouble / spark.sql("SELECT COUNT(*) FROM EXAMS WHERE Exam = 'exam3'").head().get(0).asInstanceOf[Long].toDouble
+exam3Ave: Double = 89.0
+
+scala> println("Averages - Exam 1: " + exam1Ave + " Exam 2: " + exam2Ave + " Exam 3: " + exam3Ave)
+Averages - Exam 1: 87.5 Exam 2: 90.5 Exam 3: 89.0
+
+scala> var examMax1 = spark.sql("SELECT * FROM EXAMS WHERE Exam = 'exam1' ORDER BY Score DESC").head()
+examMax1: org.apache.spark.sql.Row = [exam1,Ethan,98]
+
+scala> println("Exam 1 Max: " + examMax1)
+Exam 1 Max: [exam1,Ethan,98]
+
+scala> var examMax2 = spark.sql("SELECT * FROM EXAMS WHERE Exam = 'exam2' ORDER BY Score DESC").head()
+examMax2: org.apache.spark.sql.Row = [exam2,Mike,98]
+
+scala> println("Exam 2 Max: " + examMax2)
+Exam 2 Max: [exam2,Mike,98]
+
+scala> var examMax3 = spark.sql("SELECT * FROM EXAMS WHERE Exam = 'exam3' ORDER BY Score DESC").head()
+examMax3: org.apache.spark.sql.Row = [exam3,Joel,95]
+
+scala> println("Exam 3 Max: " + examMax3)
+Exam 3 Max: [exam3,Joel,95]
+
+scala> //find the minimum
+
+scala> var examMin1 = spark.sql("SELECT * FROM EXAMS WHERE Exam = 'exam1' ORDER BY Score ASC").head()
+examMin1: org.apache.spark.sql.Row = [exam1,Jon,78]
+
+scala> println("Exam 1 Max: " + examMin1)
+Exam 1 Max: [exam1,Jon,78]
+
+scala> var examMin2 = spark.sql("SELECT * FROM EXAMS WHERE Exam = 'exam2' ORDER BY Score ASC").head()
+examMin2: org.apache.spark.sql.Row = [exam2,Jon,85]
+
+scala> println("Exam 2 Max: " + examMin2)
+Exam 2 Max: [exam2,Jon,85]
+
+scala> var examMin3 = spark.sql("SELECT * FROM EXAMS WHERE Exam = 'exam3' ORDER BY Score ASC").head()
+examMin3: org.apache.spark.sql.Row = [exam3,Mike,84]
+
+scala> println("Exam 3 Max: " + examMin3)
+Exam 3 Max: [exam3,Mike,84]
+
+scala> var examsDesc = spark.sql("SELECT * FROM EXAMS ORDER BY Exam, Score DESC")
+examsDesc: org.apache.spark.sql.DataFrame = [Exam: string, Name: string ... 1 more field]
+
+scala> examsDesc.show()
++-----+-----+-----+
+| Exam| Name|Score|
++-----+-----+-----+
+|exam1|Ethan|   98|
+|exam1| John|   89|
+|exam1|Jacob|   85|
+|exam1|  Jon|   78|
+|exam2| Mike|   98|
+|exam2| Joel|   91|
+|exam2| John|   88|
+|exam2|  Jon|   85|
+|exam3| Joel|   95|
+|exam3|Ethan|   90|
+|exam3|Jacob|   87|
+|exam3| Mike|   84|
++-----+-----+-----+
+
+
+scala> 
